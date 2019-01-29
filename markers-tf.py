@@ -23,24 +23,33 @@ import tensorflow as tf
 
 from PIL import Image, ImageOps
 
-#%%
 
-# Real-time data preprocessing
-img_prep = ImagePreprocessing()
-img_prep.add_featurewise_zero_center()
-img_prep.add_featurewise_stdnorm()
+x = tf.placeholder(tf.float32, shape=[None, 32, 32,1], name='input')
+y = tf.placeholder(tf.float32, shape=[None, 16, 1], name='target')
 
-# Real-time data augmentation
-img_aug = ImageAugmentation()
-img_aug.add_random_flip_leftright()
-img_aug.add_random_rotation(max_angle=25.)
+#Model
+l1 = tf.layers.conv2d(x, 32, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l2 = tf.layers.max_pooling2d(l1, 2,1)
+l3 = tf.layers.conv2d(l2, 64, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l4 = tf.layers.max_pooling2d(l3, 1,1)
+l5 = tf.layers.conv2d(l4, 64, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l6 = tf.layers.max_pooling2d(l5, 2,1)
+l7 = tf.layers.dense(l6, 512, activation=tf.nn.relu)
+l8 = tf.layers.dropout(l7)
+l9 = tf.layers.dense(l8, 16, activation=tf.nn.relu)
+output = tf.identity(l9, name="output")
+
+loss = tf.reduce_mean(tf.square(output - y), name='loss')
+optimizer = tf.train.AdamOptimizer()
+train_op = optimizer.minimize(loss, name='train')
+
+init = tf.global_variables_initializer()
 
 
 def defineArchitecture():
 
 	# Input is a 32x32 image with 1 color channels (grayscale)
-	network = convnet = input_data(shape=[None, 32, 32, 1], data_preprocessing=img_prep,
-                     data_augmentation=img_aug, name='input')
+	network = convnet = input_data(shape=[None, 32, 32, 1], data_preprocessing=img_prep, name='input')
 	
 	network = conv_2d(network, 32, 1, activation='relu', regularizer='L2')
 	
@@ -90,7 +99,7 @@ with open(feature_set) as inFile:
 X, _ = image_preloader(train_dataset_file, image_shape=(32, 32),   mode='file', categorical_labels=False, normalize=False, grayscale=True)
 X = np.reshape(X, (-1, 32, 32, 1))
 
-model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=100, validation_set=0.2, show_metric=True, run_id='da-simulated')
+model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=50, validation_set=0.2, show_metric=True, run_id='da-simulated')
 
 model.save('da.model')
 
