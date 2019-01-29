@@ -21,7 +21,7 @@ from random import sample
 
 import tensorflow as tf
 
-import pil import Image, ImageOps
+from PIL import Image, ImageOps
 
 #%%
 
@@ -90,7 +90,7 @@ with open(feature_set) as inFile:
 X, _ = image_preloader(train_dataset_file, image_shape=(32, 32),   mode='file', categorical_labels=False, normalize=False, grayscale=True)
 X = np.reshape(X, (-1, 32, 32, 1))
 
-model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=10, validation_set=0.1, show_metric=True, run_id='da-simulated')
+model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=20, validation_set=0.2, show_metric=True, run_id='da-simulated')
 
 model.save('da.model')
 
@@ -99,14 +99,27 @@ model.save('da.model')
 print("Testing")
 
 folder_names = ["7","8","9","10"]
+direction_names = ["Up", "Down", "Left", "Right"]
 
 images = []
 
 for dir in folder_names:
 	for subdir in os.listdir(dir):
-		images.append(dir +"/" + subdir + "/" + sample(os.listdir(dir + "/" + subdir),1)[0])
-		
+		images.append(dir + "/" + subdir + "/" + sample(os.listdir(dir + "/" + subdir),1)[0])
+
+predictions = []
+
 for img in images:
 	image_vector = np.array(Image.open(img)).reshape(-1, 32, 32, 1).astype("float")
-	print(img, model.predict(image_vector))
+	prediction = model.predict(image_vector)
+	#print(img)
+	#print(np.round(prediction, 2))
+
+	possibilities = (-prediction[0]).argsort()[:3]
+
+	output = img + "\t\t"
+	for pos in possibilities:
+		output = output + " " + folder_names[int(pos/len(folder_names))] + "-" + direction_names[pos%len(direction_names)] + "(" + str(round(prediction[0][pos]*100)) + "%) "
+		
+	print(output)
 
