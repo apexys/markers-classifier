@@ -90,7 +90,9 @@ with open(feature_set) as inFile:
 X, _ = image_preloader(train_dataset_file, image_shape=(32, 32),   mode='file', categorical_labels=False, normalize=False, grayscale=True)
 X = np.reshape(X, (-1, 32, 32, 1))
 
-model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=100, validation_set=0.2, show_metric=True, run_id='da-simulated')
+model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=300, validation_set=0.2, show_metric=True, run_id='da-simulated')
+
+del tf.get_collection_ref(tf.GraphKeys.TRAIN_OPS)[:]
 
 model.save('da.model')
 

@@ -1,16 +1,3 @@
-import tflearn
-from tflearn.layers.conv import conv_2d, max_pool_2d
-from tflearn.layers.core import input_data, dropout, fully_connected
-from tflearn.layers.estimator import regression
-from tflearn.data_preprocessing import ImagePreprocessing
-from tflearn.data_augmentation import ImageAugmentation
-
-
-# Build the preloader array, resize images to 128x128
-from tflearn.data_utils import image_preloader
-from tflearn.metrics import R2
-
-#%%
 import numpy as np
 from numpy.random import randint
 
@@ -27,83 +14,59 @@ from PIL import Image, ImageOps
 x = tf.placeholder(tf.float32, shape=[None, 32, 32,1], name='input')
 y = tf.placeholder(tf.float32, shape=[None, 16, 1], name='target')
 
+init = tf.global_variables_initializer()
+
+#y = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
 #Model
-l1 = tf.layers.conv2d(x, 32, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l1 = tf.layers.conv2d(x, 32, 1, activation=tf.nn.relu)
 l2 = tf.layers.max_pooling2d(l1, 2,1)
-l3 = tf.layers.conv2d(l2, 64, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l3 = tf.layers.conv2d(l2, 64, 1, activation=tf.nn.relu)
 l4 = tf.layers.max_pooling2d(l3, 1,1)
-l5 = tf.layers.conv2d(l4, 64, 1, activation=tf.nn.relu, bias_regularizer="L2")
+l5 = tf.layers.conv2d(l4, 64, 1, activation=tf.nn.relu)
 l6 = tf.layers.max_pooling2d(l5, 2,1)
 l7 = tf.layers.dense(l6, 512, activation=tf.nn.relu)
 l8 = tf.layers.dropout(l7)
-l9 = tf.layers.dense(l8, 16, activation=tf.nn.relu)
-output = tf.identity(l9, name="output")
+l9 = tf.reshape(l8, [-1, 16])
+l10 = tf.layers.dense(l9, 16, activation=tf.nn.relu)
+output = tf.identity(l10, name="output")
 
 loss = tf.reduce_mean(tf.square(output - y), name='loss')
 optimizer = tf.train.AdamOptimizer()
 train_op = optimizer.minimize(loss, name='train')
 
-init = tf.global_variables_initializer()
+
+def load_images(corpus):
+	with open(corpus) as inFile:
+		list = []
+		images = []
+		for line in inFile:
+			parts = line.split(' ')
+			images.append(np.array(Image.open(parts[0])).reshape(-1, 32, 32, 1).astype("float"))
+			labels = []
+			for i in parts[1:]:
+				labels.append(float(i))
+			list.append(labels)
+		list = np.array(list)
+		images = np.array(list)
+		return {
+			"data": images,
+			"labels": list
+		}
+		
+
+training_data = load_images('corpus.txt')
+
+print("Training data")
+
+print(len(training_data["data"]))
 
 
-def defineArchitecture():
+#model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=50, validation_set=0.2, show_metric=True, run_id='da-simulated')
 
-	# Input is a 32x32 image with 1 color channels (grayscale)
-	network = convnet = input_data(shape=[None, 32, 32, 1], data_preprocessing=img_prep, name='input')
-	
-	network = conv_2d(network, 32, 1, activation='relu', regularizer='L2')
-	
-	network = max_pool_2d(network, 2)
-	
-	network = conv_2d(network, 64, 1, activation='relu', regularizer='L2')
-	
-	network = max_pool_2d(network, 1)
+#model.save('da.model')
 
-	network = conv_2d(network, 64, 1, activation='relu', regularizer='L2')
-	
-	network = max_pool_2d(network, 2)
-	
-	# Step 6: Fully-connected 512 node neural network
-	network = fully_connected(network, 512, activation='relu')
-	
-	network = dropout(network, 0.5)
-
-	network = fully_connected(network, 16, activation='softmax')
-	network = regression(network, optimizer='adam', learning_rate=0.001, loss='categorical_crossentropy', name='targets')
-
-	return network
-#%%
-
-
-model = tflearn.DNN(defineArchitecture(), tensorboard_verbose=0, tensorboard_dir="/output")
-
-train_images = []
-train_labels = []
-
-test_images = []
-test_labels = []
-
-train_dataset_file = 'files.txt'
-
-feature_set = 'corpus.txt'
-with open(feature_set) as inFile:
-	list = []
-	for line in inFile:
-		parts = line.split(' ')
-		labels = []
-		for i in parts[1:]:
-			labels.append(float(i))
-		list.append(labels)
-	Y = np.array(list)
-
-X, _ = image_preloader(train_dataset_file, image_shape=(32, 32),   mode='file', categorical_labels=False, normalize=False, grayscale=True)
-X = np.reshape(X, (-1, 32, 32, 1))
-
-model.fit({'input': X}, {'targets': Y}, shuffle=True, batch_size=96, n_epoch=50, validation_set=0.2, show_metric=True, run_id='da-simulated')
-
-model.save('da.model')
-
-
+quit()
 
 print("Testing")
 
